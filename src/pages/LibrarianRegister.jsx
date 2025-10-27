@@ -13,7 +13,7 @@ export default function LibrarianRegister() {
 
   const [form, setForm] = useState({
     fullName: "",
-    staffId: "",
+    userId: "",
     email: "",
     password: "",
   });
@@ -42,7 +42,7 @@ export default function LibrarianRegister() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.fullName || !form.staffId || !form.email || !form.password) {
+    if (!form.fullName || !form.userId || !form.email || !form.password) {
       toast.warning("Please fill in all required fields.");
       return;
     }
@@ -59,7 +59,7 @@ export default function LibrarianRegister() {
       await createUserProfile(cred.user.uid, {
         email: form.email,
         fullName: form.fullName,
-        staffId: form.staffId,
+        userId: form.userId,
         role: "librarian",
       });
 
@@ -99,13 +99,14 @@ export default function LibrarianRegister() {
           />
 
           <input
-            name="staffId"
-            value={form.staffId}
+            name="userId"
+            value={form.userId}
             onChange={handleChange}
             placeholder="Staff ID"
             className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             required
           />
+
 
           <input
             name="email"

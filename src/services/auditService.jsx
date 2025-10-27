@@ -1,5 +1,12 @@
 // src/services/auditService.js
-import { collection, addDoc, getDocs, orderBy, query, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+} from "firebase/firestore";
 import { firestore } from "./firebase";
 
 const auditCollection = collection(firestore, "auditLogs");
@@ -11,24 +18,26 @@ export const auditService = {
     userId,
     userName,
     materialId,
-    materialTitle, 
+    materialTitle,
     comment,
     librarianName,
-    librarianId
+    librarianId,
   }) {
     try {
-      await addDoc(auditCollection, {
+      const auditData = {
         action,
         transactionId,
         userId,
         userName: userName || "Unknown User",
-        materialId,
+        materialId: materialId || "",
         materialTitle: materialTitle || "Untitled Material",
         comment: comment || "",
         librarianName: librarianName || "Unknown Librarian",
         librarianId: librarianId || "",
         timestamp: serverTimestamp(),
-      });
+      };
+
+      await addDoc(auditCollection, auditData);
     } catch (err) {
       console.error("❌ Failed to create audit log:", err);
     }

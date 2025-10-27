@@ -42,7 +42,7 @@ export default function Register() {
 
       await createUserProfile(cred.user.uid, {
         email,
-        name: fullName,
+        fullName,
         userId,
         role: "user",
       });
@@ -73,6 +73,7 @@ export default function Register() {
               onChange={(e) => setFullName(e.target.value)}
               type="text"
               placeholder="John Doe"
+              required
               className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -86,6 +87,7 @@ export default function Register() {
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               type="text"
+              required
               placeholder="staff id or admission number"
               className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -98,6 +100,7 @@ export default function Register() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
+              required
               placeholder="you@example.com"
               className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -112,6 +115,7 @@ export default function Register() {
                 onChange={(e) => setPass(e.target.value)}
                 type={showPass ? "text" : "password"}
                 placeholder="••••••••"
+                required
                 className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
               />
               <button

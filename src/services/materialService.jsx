@@ -24,11 +24,13 @@ const materialsCol = collection(firestore, "materials");
 export async function createMaterial(data) {
   const now = serverTimestamp();
   const newDocRef = doc(materialsCol);
-  const id = newDocRef.id;
+  const materialId = newDocRef.id;
 
   const payload = {
-    id,
+    materialId,
     ...data,
+    title: data.title || "",
+    author: data.author || "",
     title_lower: (data.title || "").toLowerCase(),
     author_lower: (data.author || "").toLowerCase(),
     viewCount: Number(data.viewCount || 0),
@@ -37,7 +39,7 @@ export async function createMaterial(data) {
   };
 
   await setDoc(newDocRef, payload);
-  return { id, success: true };
+  return { id: materialId, success: true };
 }
 
 // update material

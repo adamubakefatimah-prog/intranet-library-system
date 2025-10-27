@@ -17,7 +17,6 @@ import { auditService } from "./auditService";
 const transactionsCol = collection(firestore, "transactions");
 
 export const transactionService = {
-  // 🔹 Fetch transactions for a specific user
   async getUserTransactions(uid) {
     if (!uid) return [];
     try {
@@ -30,7 +29,6 @@ export const transactionService = {
     }
   },
 
-  // 🔹 Fetch all transactions (for librarians)
   async getAllTransactions() {
     try {
       const snapshot = await getDocs(transactionsCol);
@@ -39,102 +37,118 @@ export const transactionService = {
         id: doc.id,
         ...doc.data(),
       }));
-
     } catch (error) {
       console.error("❌ Error fetching all transactions:", error);
       return [];
     }
   },
 
-  // 🔹 Create a borrow request (user requests a material)
-  async requestBook(user, material) {
-    if (!user || !material) throw new Error("Missing user or material details");
-
+  async requestBook(user, record) {
+    if (!user || !record) throw new Error("Missing user or material details");
+  
     try {
-      // prevent duplicate requests
       const q = query(
         transactionsCol,
         where("userId", "==", user.uid),
-        where("materialId", "==", material.id),
+        where("recordId", "==", record.id),
         where("status", "in", ["pending", "borrowed"])
       );
+  
       const existing = await getDocs(q);
       if (!existing.empty) {
         throw new Error("You already have an active or pending request for this material.");
       }
-
+  
+      const userRef = doc(firestore, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+  
+      let userName = "Unknown User";
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        userName = userData.fullName || user.email || userName;
+      }
+  
       await addDoc(transactionsCol, {
         userId: user.uid,
-        userName: user.fullName || user.email || "Unknown User",
-        materialId: material.id,
-        title: material.title || "Untitled Material",
-        author: material.author || "",
-        type: material.type || "",
+        userName,
+        recordId: record.id,
+        title: record.title || "Untitled Material",
+        author: record.author || "",
+        type: record.type || "",
         status: "pending",
         createdAt: serverTimestamp(),
         borrowDate: null,
         dueDate: null,
         returnDate: null,
       });
-
+  
       return { success: true };
     } catch (error) {
       console.error("❌ Error creating borrow request:", error);
       throw error;
     }
   },
+  
 
-  // 🔹 Update transaction (approve / reject / return)
-  // 🔹 Update transaction (approve / reject / return)
-async updateTransactionStatus(id, status, extraData = {}) {
-  if (!id || !status) throw new Error("Missing transaction ID or status");
+  async updateTransactionStatus(id, status, extraData = {}) {
+    if (!id || !status) throw new Error("Missing transaction ID or status");
 
-  try {
-    const ref = doc(firestore, "transactions", id);
-    const snapshot = await getDoc(ref);
-    if (!snapshot.exists()) throw new Error("Transaction not found");
+    try {
+      const ref = doc(firestore, "transactions", id);
+      const snapshot = await getDoc(ref);
+      if (!snapshot.exists()) throw new Error("Transaction not found");
 
-    const existingTx = snapshot.data();
+      const existingTx = snapshot.data();
 
-    // ✅ Convert date strings to Firestore Timestamps
-    const dataToUpdate = { ...extraData };
+      const dataToUpdate = { ...extraData };
 
-    if (extraData.borrowDate) {
-      dataToUpdate.borrowDate = new Date(extraData.borrowDate);
+      if (extraData.borrowDate) {
+        dataToUpdate.borrowDate = new Date(extraData.borrowDate);
+      }
+
+      if (extraData.dueDate) {
+        dataToUpdate.dueDate = new Date(extraData.dueDate);
+      }
+
+      if (extraData.returnDate) {
+        dataToUpdate.returnDate = new Date(extraData.returnDate);
+      }
+
+      await updateDoc(ref, {
+        status,
+        updatedAt: serverTimestamp(),
+        ...dataToUpdate,
+      });
+
+      const currentUser = getAuth().currentUser;
+      let librarianName = currentUser?.email || "Unknown Librarian";
+      let librarianId = currentUser?.uid;
+
+      if (librarianId) {
+        const librarianRef = doc(firestore, "users", librarianId);
+        const librarianSnap = await getDoc(librarianRef);
+        if (librarianSnap.exists()) {
+          const librarianData = librarianSnap.data();
+          librarianName = librarianData.fullName || librarianName;
+        }
+      }
+
+      await auditService.createLog({
+        action: status,
+        transactionId: id,
+        userId: existingTx.userId,
+        userName: existingTx.userName,
+        materialId: existingTx.recordId,
+        materialTitle: existingTx.title,
+        librarianName,
+        librarianId,
+        comment: extraData?.comment,
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error("❌ Error updating transaction:", error);
+      throw error;
     }
-
-    if (extraData.dueDate) {
-      dataToUpdate.dueDate = new Date(extraData.dueDate);
-    }
-
-    if (extraData.returnDate) {
-      dataToUpdate.returnDate = new Date(extraData.returnDate);
-    }
-
-    await updateDoc(ref, {
-      status,
-      updatedAt: serverTimestamp(),
-      ...dataToUpdate,
-    });
-
-    const currentUser = getAuth().currentUser;
-    await auditService.createLog({
-      action: status,
-      transactionId: id,
-      userId: existingTx.userId,
-      userName: existingTx.fullName,
-      materialId: existingTx.materialId,
-      materialTitle: existingTx.title,
-      librarianName: currentUser?.fullName || currentUser?.email || "Unknown Librarian",
-      librarianId: currentUser?.uid,
-      comment: extraData?.comment,
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error("❌ Error updating transaction:", error);
-    throw error;
-  }
-}
-
+  },
 };

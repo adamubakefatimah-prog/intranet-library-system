@@ -10,6 +10,8 @@ import { format } from "date-fns";
 export default function LibrarianTransactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [dropdownOpenId, setDropdownOpenId] = useState(null);
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -31,7 +33,6 @@ export default function LibrarianTransactions() {
       const res = await transactionService.getAllTransactions();
       setTransactions(res || []);
     } catch (err) {
-      console.error("Failed loading transactions", err);
       toast.error("Failed to load transactions");
     } finally {
       setLoading(false);
@@ -45,6 +46,7 @@ export default function LibrarianTransactions() {
     setComment("");
     setDueDate("");
     setModalOpen(true);
+    setDropdownOpenId(null);
   };
 
   const closeModal = () => {
@@ -67,50 +69,42 @@ export default function LibrarianTransactions() {
     if (modalType === "return") newStatus = "returned";
 
     if (newStatus === "borrowed" && !dueDate) {
-      toast.warn("Please set a due date before confirming borrow.");
+      toast.warning("Please set a due date before confirming borrow.");
       return;
     }
 
     try {
       setActionLoadingId(id);
-
       const extraData = {};
+
       if (comment) extraData.comment = comment;
 
       if (newStatus === "borrowed") {
-        const now = new Date();
-        const due = new Date(`${dueDate}T00:00:00`);
-        extraData.borrowDate = now.toISOString();
-        extraData.dueDate = due.toISOString();
+        extraData.borrowDate = new Date().toISOString();
+        extraData.dueDate = new Date(`${dueDate}T00:00:00`).toISOString();
       }
 
       if (newStatus === "returned") {
         extraData.returnDate = new Date().toISOString();
       }
 
-      await transactionService.updateTransactionStatus(
-        id,
-        newStatus,
-        extraData
-      );
+      await transactionService.updateTransactionStatus(id, newStatus, extraData);
 
-      setTransactions((prev) => {
-        if (newStatus === "returned") {
-          return prev.filter((t) => t.id !== id);
-        }
-        return prev.map((t) =>
-          t.id === id ? { ...t, status: newStatus, ...extraData } : t
-        );
-      });
+      setTransactions((prev) =>
+        newStatus === "returned"
+          ? prev.filter((t) => t.id !== id)
+          : prev.map((t) =>
+              t.id === id ? { ...t, status: newStatus, ...extraData } : t
+            )
+      );
 
       toast.success(
         newStatus === "returned"
-          ? "Transaction marked returned and removed from list."
-          : `Transaction updated to "${newStatus}"`
+          ? "✔ Returned and removed from list."
+          : `✔ Status updated to: ${newStatus}`
       );
     } catch (err) {
-      console.error("Action failed", err);
-      toast.error(err?.message || "Failed to update transaction");
+      toast.error("Failed to update transaction");
     } finally {
       setActionLoadingId(null);
       closeModal();
@@ -125,65 +119,45 @@ export default function LibrarianTransactions() {
   const goNext = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
 
   const formatDate = (dateValue) => {
-  if (!dateValue) return "—";
-
-  try {
-    let date;
-
-    // Handle Firestore Timestamp
-    if (typeof dateValue.toDate === "function") {
-      date = dateValue.toDate();
-    }
-    // Handle ISO string (e.g., "2025-10-19T00:00:00Z")
-    else if (typeof dateValue === "string") {
-      if (dateValue.trim() === "") return "—";
-      const parsed = new Date(dateValue);
-      if (isNaN(parsed.getTime())) return "—";
-      date = parsed;
-    }
-    // Handle Unix timestamp (milliseconds)
-    else if (typeof dateValue === "number") {
-      date = new Date(dateValue);
-    }
-    // Otherwise give up gracefully
-    else {
+    if (!dateValue) return "—";
+    try {
+      let date;
+      if (typeof dateValue.toDate === "function") {
+        date = dateValue.toDate();
+      } else {
+        date = new Date(dateValue);
+      }
+      return isNaN(date.getTime()) ? "—" : format(date, "MMM dd, yyyy");
+    } catch {
       return "—";
     }
-
-    return format(date, "MMM dd, yyyy");
-  } catch (error) {
-    console.error("❌ Error formatting date:", error, dateValue);
-    return "—";
-  }
-};
-
+  };
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/audit-log"
-            className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-sm text-white"
-          >
-            View Audit Log
-          </Link>
-          <button
-            onClick={fetchTransactions}
-            className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
-          >
-            Refresh
-          </button>
-        </div>
+        <Link
+          to="/audit-log"
+          className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-sm text-white"
+        >
+          Audit Log
+        </Link>
+
+        <button
+          onClick={fetchTransactions}
+          className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
+        >
+          Refresh
+        </button>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-56 text-gray-400">
-          <Loader2 className="animate-spin mr-2" /> Loading transactions...
+        <div className="flex items-center justify-center h-48 text-gray-400">
+          <Loader2 className="animate-spin mr-2" /> Loading...
         </div>
       ) : displayed.length === 0 ? (
         <div className="text-center text-gray-400 py-10">
-          No transactions to show.
+          No transactions available.
         </div>
       ) : (
         <>
@@ -193,98 +167,62 @@ export default function LibrarianTransactions() {
                 <tr>
                   <th className="p-3">User</th>
                   <th className="p-3">Material</th>
-                  <th className="p-3">Borrow Date</th>
-                  <th className="p-3">Due Date</th>
+                  <th className="p-3">Borrowed</th>
+                  <th className="p-3">Due</th>
                   <th className="p-3">Status</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
+
               <tbody>
                 {displayed.map((tx) => (
                   <tr
                     key={tx.id}
-                    className="border-t border-slate-700 hover:bg-slate-700/30 transition"
+                    className="border-t border-slate-700 hover:bg-slate-700/30"
                   >
-                    <td className="p-3 text-white">
-                      {tx.userName || tx.userEmail || tx.userId}
-                    </td>
-                    <td className="p-3 text-white">
-                      {tx.title || tx.materialTitle}
-                    </td>
+                    <td className="p-3 capitalize">{tx.userName || tx.userEmail}</td>
+                    <td className="p-3">{tx.title}</td>
                     <td>{formatDate(tx.borrowDate)}</td>
                     <td>{formatDate(tx.dueDate)}</td>
-
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          tx.status === "approved"
-                            ? "bg-blue-700/40 text-blue-200"
-                            : tx.status === "pending"
-                            ? "bg-yellow-700/30 text-yellow-200"
-                            : tx.status === "borrowed"
-                            ? "bg-indigo-700/30 text-indigo-200"
-                            : tx.status === "rejected"
-                            ? "bg-red-700/30 text-red-200"
-                            : tx.status === "returned"
-                            ? "bg-green-700/30 text-green-200"
-                            : "bg-slate-700/30 text-slate-200"
-                        }`}
-                      >
+                    <td className="p-3 text-xs">
+                      <span className={`px-2 py-1 rounded ${{
+                        pending: "bg-yellow-700/30 text-yellow-200",
+                        approved: "bg-blue-700/30 text-blue-200",
+                        borrowed: "bg-indigo-700/30 text-indigo-200",
+                        returned: "bg-green-700/30 text-green-200",
+                        rejected: "bg-red-700/30 text-red-200",
+                      }[tx.status]}`}>
                         {tx.status}
                       </span>
                     </td>
-                    <td className="p-3 text-right relative">
-                      <div className="inline-block text-left">
-                        <button
-                          className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-sm text-white transition-all duration-200"
-                          onClick={() =>
-                            setActionLoadingId((prev) =>
-                              prev === tx.id ? null : tx.id
-                            )
-                          }
-                        >
-                          Actions ▾
-                        </button>
 
-                        {/* Dropdown Menu */}
-                        {actionLoadingId === tx.id && (
-                          <div
-                            className="absolute right-0 mt-2 w-44 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-100
-                   origin-top-right animate-dropdown"
-                          >
-                            {[
-                              {
-                                label: "Approve",
-                                color: "text-green-400",
-                                action: "approve",
-                              },
-                              {
-                                label: "Borrow",
-                                color: "text-indigo-400",
-                                action: "borrow",
-                              },
-                              {
-                                label: "Return",
-                                color: "text-yellow-400",
-                                action: "return",
-                              },
-                              {
-                                label: "Reject",
-                                color: "text-red-400",
-                                action: "reject",
-                              },
-                            ].map(({ label, color, action }) => (
+                    <td className="p-3 text-right relative">
+                      <button
+                        onClick={() =>
+                          setDropdownOpenId(
+                            dropdownOpenId === tx.id ? null : tx.id
+                          )
+                        }
+                        className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-sm"
+                      >
+                        Actions ▾
+                      </button>
+
+                      {dropdownOpenId === tx.id && (
+                        <div className="absolute right-0 mt-2 w-40 bg-slate-800 border border-slate-700 rounded-xl shadow-lg z-20">
+                          {["approve", "borrow", "return", "reject"].map(
+                            (action) => (
                               <button
                                 key={action}
                                 onClick={() => openModal(tx, action)}
-                                className={`block w-full text-left px-3 py-2 hover:bg-slate-700 text-sm transition-colors duration-150 ${color}`}
+                                className="block w-full text-left px-3 py-2 hover:bg-slate-700 text-sm capitalize"
                               >
-                                {label}
+                                {action}
                               </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                            )
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -292,8 +230,9 @@ export default function LibrarianTransactions() {
             </table>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-gray-300">
-            <div className="text-sm">
+          {/* Pagination */}
+          <div className="mt-4 flex items-center justify-between text-gray-300 text-sm">
+            <div>
               Showing {startIndex + 1} -{" "}
               {Math.min(startIndex + itemsPerPage, transactions.length)} of{" "}
               {transactions.length}
@@ -306,9 +245,9 @@ export default function LibrarianTransactions() {
               >
                 Previous
               </button>
-              <div className="text-sm">
-                Page {currentPage} / {totalPages}
-              </div>
+              <span>
+                {currentPage} / {totalPages}
+              </span>
               <button
                 onClick={goNext}
                 disabled={currentPage === totalPages}
@@ -321,9 +260,13 @@ export default function LibrarianTransactions() {
         </>
       )}
 
+      {/* Modal */}
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
+        confirmText="Confirm"
+        onConfirm={handleConfirm}
+        confirmDisabled={actionLoadingId === selectedTx?.id} // ✅ Fixed
         title={
           modalType === "approve"
             ? "Approve Request"
@@ -331,87 +274,37 @@ export default function LibrarianTransactions() {
             ? "Reject Request"
             : modalType === "borrow"
             ? "Mark as Borrowed"
-            : modalType === "return"
-            ? "Confirm Return"
-            : "Action"
-        }
-        confirmText={modalType === "borrow" ? "Confirm Borrow" : "Confirm"}
-        onConfirm={handleConfirm}
-        confirmDisabled={
-          actionLoadingId !== null && actionLoadingId === selectedTx?.id
+            : "Confirm Return"
         }
       >
         {selectedTx ? (
-          <div className="space-y-3">
-            <div>
-              <div className="text-sm text-slate-400">User</div>
-              <div className="text-sm font-medium">
-                {selectedTx.userName ||
-                  selectedTx.userEmail ||
-                  selectedTx.userId}
-              </div>
-            </div>
+          <>
+            <p className="text-sm text-gray-300">
+              Action on <strong>{selectedTx.title}</strong> for{" "}
+              <strong>{selectedTx.userName}</strong>
+            </p>
 
-            <div>
-              <div className="text-sm text-slate-400">Material</div>
-              <div className="text-sm font-medium">
-                {selectedTx.title || selectedTx.materialTitle}
-              </div>
-            </div>
-
-            {(modalType === "approve" || modalType === "reject") && (
-              <div>
-                <label className="block text-sm text-slate-300 mb-1">
-                  Comment (optional)
-                </label>
-                <textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  rows={3}
-                  placeholder="Add an optional note for the user..."
-                  className="w-full bg-slate-800 text-slate-100 p-2 rounded border border-slate-700"
-                />
-              </div>
+            {(modalType === "approve" ||
+              modalType === "reject" ||
+              modalType === "return") && (
+              <textarea
+                className="w-full p-2 bg-slate-800 border border-slate-700 rounded text-white mt-3"
+                rows={3}
+                placeholder="Comment (optional)"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
             )}
 
             {modalType === "borrow" && (
-              <div className="space-y-2">
-                <div className="text-sm text-slate-400">Borrow date</div>
-                <div className="text-sm font-medium text-white">
-                  {format(new Date(), "MMM dd, yyyy")}
-                </div>
-
-                <div className="text-sm text-slate-400 mt-2">Set due date</div>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="bg-slate-800 text-slate-100 p-2 rounded border border-slate-700"
-                />
-              </div>
+              <input
+                type="date"
+                className="w-full p-2 mt-3 bg-slate-800 border border-slate-700 rounded text-white"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
             )}
-
-            {modalType === "return" && (
-              <div>
-                <p className="text-sm text-slate-300">
-                  Confirm that the material has been returned. This will remove
-                  the transaction from the list.
-                </p>
-                <div className="mt-2">
-                  <label className="block text-sm text-slate-300 mb-1">
-                    Comment (optional)
-                  </label>
-                  <textarea
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    rows={2}
-                    placeholder="Optional note"
-                    className="w-full bg-slate-800 text-slate-100 p-2 rounded border border-slate-700"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+          </>
         ) : (
           <div>Loading...</div>
         )}

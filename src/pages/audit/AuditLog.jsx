@@ -141,7 +141,7 @@ export default function AuditLog() {
                       </span>
                     </td>
                     <td className="p-3">
-                      <div className="font-medium text-slate-200">
+                      <div className="font-medium text-slate-200 capitalize">
                         {log.userName || "—"}
                       </div>
                     </td>
@@ -152,7 +152,7 @@ export default function AuditLog() {
                     </td>
                     <td className="p-3 text-slate-300">{log.comment || "—"}</td>
                     <td className="p-3">
-                      <div className="font-medium text-slate-200">
+                      <div className="font-medium text-slate-200 capitalize">
                         {log.librarianName || "—"}
                       </div>
                     </td>

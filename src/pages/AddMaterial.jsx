@@ -13,7 +13,7 @@ export default function AddMaterial() {
   const [form, setForm] = useState({
     title: "",
     author: "",
-    materialId: "",
+    // materialId: "",
     publicationYear: "",
     type: "",
     abstract: "",
@@ -46,7 +46,7 @@ export default function AddMaterial() {
       await createMaterial({
         title: form.title,
         author: form.author,
-        materialId: form.materialId || `MAT-${Date.now()}`, // auto-generate if empty
+        // materialId: form.materialId || `MAT-${Date.now()}`,
         publicationYear: Number(form.publicationYear),
         type: form.type || "Book",
         abstract: form.abstract,
@@ -83,12 +83,12 @@ export default function AddMaterial() {
           onChange={(e) => setForm((f) => ({ ...f, author: e.target.value }))}
         />
 
-        <input
+        {/* <input
           className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
           placeholder="Material ID (optional)"
           value={form.materialId}
           onChange={(e) => setForm((f) => ({ ...f, materialId: e.target.value }))}
-        />
+        /> */}
 
         <select
           value={form.publicationYear}

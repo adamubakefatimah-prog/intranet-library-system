@@ -9,7 +9,7 @@ export async function createUserProfile(uid, data, role = 'user') {
       ? {
           uid,
           email: data.email,
-          name: data.name || '',
+          fullName: data.fullName || '',
           userId: data.userId || '',
           role: data.role || role,
           createdAt: new Date(),
