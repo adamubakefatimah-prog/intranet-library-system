@@ -3,16 +3,16 @@ import { useState, useEffect } from "react";
 
 export default function Home() {
   const slides = [
-    "src/assets/image/slide1.jpg.jpg",
-    "src/assets/image/slide2.jpg.jpg",
-    "src/assets/image/slide3.jpg.jpg",
-    "src/assets/image/slide4.jpg.jpg",
-    "src/assets/image/slide5.jpg.jpg",
-    "src/assets/image/slide6.jpg.jpg",
-    "src/assets/image/slide7.jpg.jpg",
-    "src/assets/image/slide8.jpg.jpg",
-    "src/assets/image/slide9.jpg.jpg",
-    "src/assets/image/slide10.jpg.jpg",
+    "/image/slide1.jpg.jpg",
+    "/image/slide2.jpg.jpg",
+    "/image/slide3.jpg.jpg",
+    "/image/slide4.jpg.jpg",
+    "/image/slide5.jpg.jpg",
+    "/image/slide6.jpg.jpg",
+    "/image/slide7.jpg.jpg",
+    "/image/slide8.jpg.jpg",
+    "/image/slide9.jpg.jpg",
+    "/image/slide10.jpg.jpg",
   ];
 
   const [current, setCurrent] = useState(0);
