@@ -33,7 +33,7 @@ export default function LibrarianTransactions() {
       const res = await transactionService.getAllTransactions();
       setTransactions(res || []);
     } catch (err) {
-      toast.error("Failed to load transactions");
+      toast.error("Failed to load transactions ", err.message);
     } finally {
       setLoading(false);
       setCurrentPage(1);
@@ -68,6 +68,7 @@ export default function LibrarianTransactions() {
     if (modalType === "borrow") newStatus = "borrowed";
     if (modalType === "return") newStatus = "returned";
 
+    // ✅ Require due date if borrowing
     if (newStatus === "borrowed" && !dueDate) {
       toast.warning("Please set a due date before confirming borrow.");
       return;
@@ -77,19 +78,33 @@ export default function LibrarianTransactions() {
       setActionLoadingId(id);
       const extraData = {};
 
-      if (comment) extraData.comment = comment;
+      // ✅ Add comment if provided
+      if (comment) extraData.comment = comment.trim();
 
+      // ✅ Handle borrow logic correctly
       if (newStatus === "borrowed") {
-        extraData.borrowDate = new Date().toISOString();
-        extraData.dueDate = new Date(`${dueDate}T00:00:00`).toISOString();
+        extraData.borrowDate = new Date(); // current timestamp
+        // safer parsing of librarian-input date
+        const due = new Date(dueDate);
+        if (isNaN(due.getTime())) {
+          toast.error("Invalid due date. Please pick a valid date.");
+          return;
+        }
+        extraData.dueDate = due;
       }
 
+      // ✅ Handle return logic
       if (newStatus === "returned") {
-        extraData.returnDate = new Date().toISOString();
+        extraData.returnDate = new Date();
       }
 
-      await transactionService.updateTransactionStatus(id, newStatus, extraData);
+      await transactionService.updateTransactionStatus(
+        id,
+        newStatus,
+        extraData
+      );
 
+      // ✅ Update UI state after success
       setTransactions((prev) =>
         newStatus === "returned"
           ? prev.filter((t) => t.id !== id)
@@ -104,6 +119,7 @@ export default function LibrarianTransactions() {
           : `✔ Status updated to: ${newStatus}`
       );
     } catch (err) {
+      console.error(err);
       toast.error("Failed to update transaction");
     } finally {
       setActionLoadingId(null);
@@ -133,14 +149,36 @@ export default function LibrarianTransactions() {
     }
   };
 
+  const getModalInstructions = (type) => {
+    switch (type) {
+      case "approve":
+        return "Review the user's request and confirm approval.";
+      case "reject":
+        return "Provide a short reason for rejection to help maintain transparency.";
+      case "borrow":
+        return "Set a due date before confirming borrowing.";
+      case "return":
+        return "Confirm that the item has been physically returned.";
+      default:
+        return "";
+    }
+  };
+
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center space-x-2 mb-4">
         <Link
           to="/audit-log"
           className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-sm text-white"
         >
           Audit Log
+        </Link>
+
+        <Link
+          to="/reports/overdue"
+          className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-sm text-white"
+        >
+          Overdue Report
         </Link>
 
         <button
@@ -180,18 +218,24 @@ export default function LibrarianTransactions() {
                     key={tx.id}
                     className="border-t border-slate-700 hover:bg-slate-700/30"
                   >
-                    <td className="p-3 capitalize">{tx.userName || tx.userEmail}</td>
+                    <td className="p-3 capitalize">
+                      {tx.userName || tx.userEmail}
+                    </td>
                     <td className="p-3">{tx.title}</td>
                     <td>{formatDate(tx.borrowDate)}</td>
                     <td>{formatDate(tx.dueDate)}</td>
                     <td className="p-3 text-xs">
-                      <span className={`px-2 py-1 rounded ${{
-                        pending: "bg-yellow-700/30 text-yellow-200",
-                        approved: "bg-blue-700/30 text-blue-200",
-                        borrowed: "bg-indigo-700/30 text-indigo-200",
-                        returned: "bg-green-700/30 text-green-200",
-                        rejected: "bg-red-700/30 text-red-200",
-                      }[tx.status]}`}>
+                      <span
+                        className={`px-2 py-1 rounded ${
+                          {
+                            pending: "bg-yellow-700/30 text-yellow-200",
+                            approved: "bg-blue-700/30 text-blue-200",
+                            borrowed: "bg-indigo-700/30 text-indigo-200",
+                            returned: "bg-green-700/30 text-green-200",
+                            rejected: "bg-red-700/30 text-red-200",
+                          }[tx.status]
+                        }`}
+                      >
                         {tx.status}
                       </span>
                     </td>
@@ -266,7 +310,7 @@ export default function LibrarianTransactions() {
         onClose={closeModal}
         confirmText="Confirm"
         onConfirm={handleConfirm}
-        confirmDisabled={actionLoadingId === selectedTx?.id} // ✅ Fixed
+        confirmDisabled={actionLoadingId === selectedTx?.id}
         title={
           modalType === "approve"
             ? "Approve Request"
@@ -276,14 +320,17 @@ export default function LibrarianTransactions() {
             ? "Mark as Borrowed"
             : "Confirm Return"
         }
+        metaInfo={{
+          userName: selectedTx?.userName,
+          admissionNumber: selectedTx?.admissionNumber,
+          userEmail: selectedTx?.userEmail,
+          materialTitle: selectedTx?.title,
+          status: selectedTx?.status,
+        }}
+        instructions={getModalInstructions(modalType)}
       >
         {selectedTx ? (
           <>
-            <p className="text-sm text-gray-300">
-              Action on <strong>{selectedTx.title}</strong> for{" "}
-              <strong>{selectedTx.userName}</strong>
-            </p>
-
             {(modalType === "approve" ||
               modalType === "reject" ||
               modalType === "return") && (
@@ -297,12 +344,17 @@ export default function LibrarianTransactions() {
             )}
 
             {modalType === "borrow" && (
-              <input
-                type="date"
-                className="w-full p-2 mt-3 bg-slate-800 border border-slate-700 rounded text-white"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
+              <div>
+                <label className="block text-sm text-slate-300 mb-2">
+                  Select Due Date:
+                </label>
+                <input
+                  type="date"
+                  className="w-full p-2 bg-slate-800 border border-slate-700 rounded text-white"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+              </div>
             )}
           </>
         ) : (

@@ -15,6 +15,7 @@ import UserTransactions from "./pages/transactions/UserTransactions";
 import LibrarianTransactions from "./pages/transactions/LibrarianTransactions";
 import { ToastContainer } from "react-toastify";
 import AuditLog from "./pages/audit/AuditLog";
+import OverdueReports from "./pages/report/OverdueReport";
 import "react-toastify/dist/ReactToastify.css";
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
         <Route path="/register-librarian" element={<Layout title="Register Librarian"><RegisterLibrarian /></Layout>} />
         <Route path="/login" element={<Layout title="Login"><Login /></Layout>} />
         <Route path="/register" element={<Layout title="Register"><Register /></Layout>} />
+        <Route path="/reports/overdue" element={ <Layout title="Overdue Reports"><OverdueReports /></Layout>} />
         <Route path="*" element={<Layout title="Not Found"><NotFound /></Layout>} />
       </Routes>
     </>

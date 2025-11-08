@@ -1,4 +1,3 @@
-// src/services/auditService.js
 import {
   collection,
   addDoc,
@@ -17,6 +16,7 @@ export const auditService = {
     transactionId,
     userId,
     userName,
+    admissionNumber,
     materialId,
     materialTitle,
     comment,
@@ -25,10 +25,11 @@ export const auditService = {
   }) {
     try {
       const auditData = {
-        action,
-        transactionId,
-        userId,
+        action: action || "",
+        transactionId: transactionId || "",
+        userId: userId || "",
         userName: userName || "Unknown User",
+        admissionNumber: admissionNumber || "",
         materialId: materialId || "",
         materialTitle: materialTitle || "Untitled Material",
         comment: comment || "",

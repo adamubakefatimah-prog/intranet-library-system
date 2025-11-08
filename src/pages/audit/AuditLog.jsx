@@ -1,3 +1,4 @@
+// src/pages/audit/AuditLog.jsx
 import { useEffect, useState } from "react";
 import { auditService } from "../../services/auditService";
 import { Loader2 } from "lucide-react";
@@ -41,7 +42,7 @@ export default function AuditLog() {
     const matchesSearch =
       !search ||
       (log.userName && log.userName.toLowerCase().includes(query)) ||
-      (log.userId && log.userId.toLowerCase().includes(query)) ||
+      (log.admissionNumber && log.admissionNumber.toLowerCase().includes(query)) ||
       (log.materialTitle && log.materialTitle.toLowerCase().includes(query)) ||
       (log.comment && log.comment.toLowerCase().includes(query));
     return matchesAction && matchesSearch;
@@ -57,11 +58,11 @@ export default function AuditLog() {
 
   return (
     <div className="p-6">
-      {/* filters */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <input
           type="text"
-          placeholder="Search by user, material or comment"
+          placeholder="Search by user, admission no, or material"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="bg-slate-800 text-slate-100 px-3 py-2 rounded border border-slate-700 w-64"
@@ -73,9 +74,9 @@ export default function AuditLog() {
         >
           <option value="all">All Actions</option>
           <option value="approved">Approved</option>
-          <option value="rejected">Reject</option>
-          <option value="borrowed">Borrow</option>
-          <option value="returned">Return</option>
+          <option value="rejected">Rejected</option>
+          <option value="borrowed">Borrowed</option>
+          <option value="returned">Returned</option>
         </select>
 
         <div className="flex items-center self-end space-x-3 ml-auto">
@@ -85,7 +86,6 @@ export default function AuditLog() {
           >
             Refresh
           </button>
-
           <button
             onClick={() => navigate(-1)}
             className="px-5 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm transition"
@@ -111,6 +111,7 @@ export default function AuditLog() {
                 <tr>
                   <th className="p-3">Action</th>
                   <th className="p-3">User</th>
+                  <th className="p-3">UId</th>
                   <th className="p-3">Material</th>
                   <th className="p-3">Comment</th>
                   <th className="p-3">Librarian</th>
@@ -140,21 +141,20 @@ export default function AuditLog() {
                         {log.action}
                       </span>
                     </td>
-                    <td className="p-3">
-                      <div className="font-medium text-slate-200 capitalize">
-                        {log.userName || "—"}
-                      </div>
+                    <td className="p-3 capitalize">
+                      {log.userName || "—"}
                     </td>
                     <td className="p-3">
-                      <div className="font-medium text-slate-200">
-                        {log.materialTitle || "—"}
-                      </div>
+                      {log.admissionNumber || "—"}
                     </td>
-                    <td className="p-3 text-slate-300">{log.comment || "—"}</td>
                     <td className="p-3">
-                      <div className="font-medium text-slate-200 capitalize">
-                        {log.librarianName || "—"}
-                      </div>
+                      {log.materialTitle || "—"}
+                    </td>
+                    <td className="p-3 text-slate-300">
+                      {log.comment || "—"}
+                    </td>
+                    <td className="p-3 capitalize">
+                      {log.librarianName || "—"}
                     </td>
                     <td className="p-3">
                       {log.timestamp?.toDate
@@ -168,8 +168,8 @@ export default function AuditLog() {
           </div>
 
           {/* Pagination */}
-          <div className="mt-4 flex items-center justify-between text-gray-300">
-            <div className="text-sm">
+          <div className="mt-4 flex items-center justify-between text-gray-300 text-sm">
+            <div>
               Showing {startIdx + 1}-
               {Math.min(startIdx + perPage, filteredLogs.length)} of{" "}
               {filteredLogs.length}
@@ -182,9 +182,9 @@ export default function AuditLog() {
               >
                 Previous
               </button>
-              <div className="text-sm">
-                Page {currentPage} / {totalPages}
-              </div>
+              <span>
+                {currentPage} / {totalPages}
+              </span>
               <button
                 onClick={goNext}
                 disabled={currentPage === totalPages}
