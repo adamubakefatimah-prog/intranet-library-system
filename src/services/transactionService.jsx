@@ -1,3 +1,4 @@
+// src/services/transactionService.js
 import { firestore } from "./firebase";
 import {
   collection,
@@ -55,28 +56,28 @@ export const transactionService = {
 
       const existing = await getDocs(q);
       if (!existing.empty) {
-        throw new Error(
-          "You already have an active or pending request for this material."
-        );
+        throw new Error("You already have an active or pending request for this material.");
       }
 
-      // read user profile to get fullName and admission/staff id (userId field in users doc)
+      // Fetch user profile
       const userRef = doc(firestore, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
       let userName = "Unknown User";
       let admissionNumber = "";
+      let department = "";
       if (userSnap.exists()) {
         const userData = userSnap.data();
-        userName = userData.fullName || user.email || userName;
-        // some apps store staff/admission in different field names — adjust if yours differs
+        userName = userData.fullName || user.email;
         admissionNumber = userData.userId || userData.staffId || "";
+        department = userData.department || "";
       }
 
       await addDoc(transactionsCol, {
         userId: user.uid,
         userName,
         admissionNumber,
+        department,
         recordId: record.id,
         title: record.title || "Untitled Material",
         author: record.author || "",
@@ -106,49 +107,39 @@ export const transactionService = {
       const existingTx = snapshot.data();
       const dataToUpdate = { ...extraData };
 
-      // Normalize date fields to Date objects (Firestore client will convert Date -> Timestamp)
-      if (extraData.borrowDate) {
-        dataToUpdate.borrowDate = extraData.borrowDate instanceof Date
-          ? extraData.borrowDate
-          : new Date(extraData.borrowDate);
-      }
-      if (extraData.dueDate) {
-        dataToUpdate.dueDate = extraData.dueDate instanceof Date
-          ? extraData.dueDate
-          : new Date(extraData.dueDate);
-      }
-      if (extraData.returnDate) {
-        dataToUpdate.returnDate = extraData.returnDate instanceof Date
-          ? extraData.returnDate
-          : new Date(extraData.returnDate);
-      }
+      // Normalize date fields
+      ["borrowDate", "dueDate", "returnDate"].forEach((key) => {
+        if (extraData[key]) {
+          dataToUpdate[key] =
+            extraData[key] instanceof Date
+              ? extraData[key]
+              : new Date(extraData[key]);
+        }
+      });
 
-      // Ensure we persist admissionNumber and a stable userName on the transaction
-      // (in case older transactions don't have it)
+      // Fetch user profile for details
       const userRef = doc(firestore, "users", existingTx.userId);
       const userSnap = await getDoc(userRef);
       let admissionNumber = existingTx.admissionNumber || "";
       let storedUserName = existingTx.userName || "";
+      let department = existingTx.department || "";
       if (userSnap.exists()) {
         const userData = userSnap.data();
         admissionNumber = userData.userId || userData.staffId || admissionNumber;
-        storedUserName = userData.fullName || storedUserName || userData.email || storedUserName;
+        storedUserName = userData.fullName || storedUserName || userData.email;
+        department = userData.department || department;
       }
-
-      // also ensure transaction doc gets admissionNumber and userName updated (non-destructive)
-      const ensureFields = {
-        admissionNumber: admissionNumber || "",
-        userName: storedUserName || existingTx.userName || "",
-      };
 
       await updateDoc(ref, {
         status,
         updatedAt: serverTimestamp(),
         ...dataToUpdate,
-        ...ensureFields,
+        admissionNumber,
+        userName: storedUserName,
+        department,
       });
 
-      // get librarian info (fetch profile for fullName)
+      // Get librarian info
       const currentUser = getAuth().currentUser;
       let librarianName = currentUser?.email || "Unknown Librarian";
       let librarianId = currentUser?.uid;
@@ -157,8 +148,7 @@ export const transactionService = {
         const librarianRef = doc(firestore, "users", librarianId);
         const librarianSnap = await getDoc(librarianRef);
         if (librarianSnap.exists()) {
-          const librarianData = librarianSnap.data();
-          librarianName = librarianData.fullName || librarianName;
+          librarianName = librarianSnap.data().fullName || librarianName;
         }
       }
 
@@ -166,8 +156,9 @@ export const transactionService = {
         action: status,
         transactionId: id,
         userId: existingTx.userId,
-        userName: storedUserName || existingTx.userName,
-        admissionNumber: admissionNumber || "",
+        userName: storedUserName,
+        admissionNumber,
+        department,
         materialId: existingTx.recordId,
         materialTitle: existingTx.title,
         librarianName,

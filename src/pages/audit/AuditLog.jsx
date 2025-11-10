@@ -105,13 +105,14 @@ export default function AuditLog() {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto bg-slate-800 rounded-lg shadow">
+          <div className="overflow-x-auto bg-slate-800 rounded-lg shadow ">
             <table className="min-w-full text-sm text-left text-gray-300">
               <thead className="bg-slate-700 text-gray-200">
                 <tr>
                   <th className="p-3">Action</th>
                   <th className="p-3">User</th>
                   <th className="p-3">UId</th>
+                  <th className="p-3">Department</th>
                   <th className="p-3">Material</th>
                   <th className="p-3">Comment</th>
                   <th className="p-3">Librarian</th>
@@ -147,6 +148,7 @@ export default function AuditLog() {
                     <td className="p-3">
                       {log.admissionNumber || "—"}
                     </td>
+                    <td className="p-3 capitalize">{log.department || "—"}</td>
                     <td className="p-3">
                       {log.materialTitle || "—"}
                     </td>

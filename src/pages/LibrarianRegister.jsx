@@ -16,7 +16,9 @@ export default function LibrarianRegister() {
     userId: "",
     email: "",
     password: "",
+    department: "", 
   });
+
   const [loading, setLoading] = useState(false);
 
   // ✅ Only librarians can register new librarians
@@ -42,7 +44,13 @@ export default function LibrarianRegister() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.fullName || !form.userId || !form.email || !form.password) {
+    if (
+      !form.fullName ||
+      !form.userId ||
+      !form.email ||
+      !form.password ||
+      !form.department
+    ) {
       toast.warning("Please fill in all required fields.");
       return;
     }
@@ -60,6 +68,7 @@ export default function LibrarianRegister() {
         email: form.email,
         fullName: form.fullName,
         userId: form.userId,
+        department: form.department, 
         role: "librarian",
       });
 
@@ -85,10 +94,11 @@ export default function LibrarianRegister() {
     <div className="flex items-center justify-center min-h-full bg-slate-900 text-white px-4">
       <div className="bg-slate-800 p-8 rounded-lg shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2 justify-center">
-         Register Librarian
+          Register Librarian
         </h2>
 
         <form onSubmit={submit} className="space-y-4">
+          {/* Full Name */}
           <input
             name="fullName"
             value={form.fullName}
@@ -98,6 +108,7 @@ export default function LibrarianRegister() {
             required
           />
 
+          {/* Staff ID */}
           <input
             name="userId"
             value={form.userId}
@@ -107,7 +118,17 @@ export default function LibrarianRegister() {
             required
           />
 
+          {/* Department */}
+          <input
+            name="department"
+            value={form.department}
+            onChange={handleChange}
+            placeholder="Department"
+            className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
 
+          {/* Email */}
           <input
             name="email"
             value={form.email}
@@ -118,6 +139,7 @@ export default function LibrarianRegister() {
             required
           />
 
+          {/* Password */}
           <input
             name="password"
             value={form.password}
@@ -128,6 +150,7 @@ export default function LibrarianRegister() {
             required
           />
 
+          {/* Buttons */}
           <div className="flex gap-3">
             <button
               type="submit"

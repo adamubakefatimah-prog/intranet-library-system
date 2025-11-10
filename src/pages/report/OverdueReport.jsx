@@ -1,6 +1,7 @@
+// src/pages/reports/OverdueReports.jsx
 import { useEffect, useState } from "react";
 import { transactionService } from "../../services/transactionService";
-import { auditService } from "../../services/auditService";
+// import { auditService } from "../../services/auditService";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { format } from "date-fns";
@@ -27,7 +28,6 @@ export default function OverdueReports() {
       const today = new Date();
 
       const overdue = transactions.filter((tx) => {
-        // tx.dueDate may be Firestore Timestamp or JS Date string/object
         const due =
           tx.dueDate && typeof tx.dueDate.toDate === "function"
             ? tx.dueDate.toDate()
@@ -38,7 +38,6 @@ export default function OverdueReports() {
         return tx.status === "borrowed" && due && due < today;
       });
 
-      console.log("Overdue transactions:", overdue);
       setOverdueList(overdue);
     } catch (err) {
       console.error(err);
@@ -64,21 +63,9 @@ export default function OverdueReports() {
     if (!selectedTx) return;
     try {
       setActionLoading(true);
-
       await transactionService.updateTransactionStatus(selectedTx.id, "returned", {
         returnDate: new Date(),
         comment: comment || "Marked as returned (overdue).",
-      });
-
-      await auditService.createLog({
-        action: "returned (overdue)",
-        transactionId: selectedTx.id,
-        userName: selectedTx.userName,
-        userId: selectedTx.userId,
-        admissionNumber: selectedTx.admissionNumber || "",
-        materialId: selectedTx.recordId,
-        materialTitle: selectedTx.title,
-        comment: comment || "Returned late",
       });
 
       toast.success("Material marked as returned successfully.");
@@ -102,12 +89,10 @@ export default function OverdueReports() {
   const formatDate = (dateValue) => {
     if (!dateValue) return "—";
     try {
-      let date;
-      if (typeof dateValue.toDate === "function") {
-        date = dateValue.toDate();
-      } else {
-        date = new Date(dateValue);
-      }
+      const date =
+        typeof dateValue.toDate === "function"
+          ? dateValue.toDate()
+          : new Date(dateValue);
       return isNaN(date.getTime()) ? "—" : format(date, "MMM dd, yyyy");
     } catch {
       return "—";
@@ -116,7 +101,6 @@ export default function OverdueReports() {
 
   return (
     <div className="p-6 text-slate-200">
-      {/* Header */}
       <div className="flex items-center justify-end space-x-2 mb-6 pb-3">
         <button
           onClick={fetchOverdue}
@@ -132,7 +116,6 @@ export default function OverdueReports() {
         </button>
       </div>
 
-      {/* Table or loading state */}
       {loading ? (
         <div className="flex items-center justify-center h-48 text-gray-400">
           <Loader2 className="animate-spin mr-2" /> Loading overdue data...
@@ -142,11 +125,12 @@ export default function OverdueReports() {
           🎉 No overdue materials at the moment.
         </div>
       ) : (
-        <div className="overflow-x-auto bg-slate-800 rounded-lg shadow">
+        <div className="w-full overflow-x-auto bg-slate-800 rounded-lg shadow">
           <table className="min-w-full text-sm text-left text-gray-300">
             <thead className="bg-slate-700 text-gray-200 uppercase text-xs tracking-wide">
               <tr>
                 <th className="p-3">User</th>
+                <th className="p-3">Department</th>
                 <th className="p-3">Adm No.</th>
                 <th className="p-3">Material</th>
                 <th className="p-3">Borrowed</th>
@@ -163,11 +147,9 @@ export default function OverdueReports() {
                     : new Date(tx.dueDate);
 
                 return (
-                  <tr
-                    key={tx.id}
-                    className="border-t border-slate-700 hover:bg-slate-700/40 transition"
-                  >
+                  <tr key={tx.id} className="border-t border-slate-700 hover:bg-slate-700/40 transition">
                     <td className="p-3 capitalize">{tx.userName}</td>
+                    <td className="p-3 capitalize">{tx.department || "—"}</td>
                     <td className="p-3">{tx.admissionNumber || "—"}</td>
                     <td className="p-3">{tx.title}</td>
                     <td className="p-3">{formatDate(tx.borrowDate)}</td>
@@ -191,7 +173,6 @@ export default function OverdueReports() {
         </div>
       )}
 
-      {/* Modal */}
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}

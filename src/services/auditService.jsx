@@ -22,6 +22,7 @@ export const auditService = {
     comment,
     librarianName,
     librarianId,
+    department,
   }) {
     try {
       const auditData = {
@@ -35,6 +36,7 @@ export const auditService = {
         comment: comment || "",
         librarianName: librarianName || "Unknown Librarian",
         librarianId: librarianId || "",
+        department: department || "—",
         timestamp: serverTimestamp(),
       };
 
