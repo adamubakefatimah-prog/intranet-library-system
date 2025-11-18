@@ -7,7 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <div className="dark">
+    <div className="dark"> {/* enforce dark-only theme */}
       <AuthProvider>
         <BrowserRouter>
           <App />

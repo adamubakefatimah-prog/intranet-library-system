@@ -1,4 +1,3 @@
-// src/services/materialService.js
 import {
   collection,
   doc,
@@ -33,6 +32,7 @@ export async function createMaterial(data) {
     author: data.author || "",
     title_lower: (data.title || "").toLowerCase(),
     author_lower: (data.author || "").toLowerCase(),
+    fileUrl: data.fileUrl || "",  
     viewCount: Number(data.viewCount || 0),
     createdAt: now,
     updatedAt: now,

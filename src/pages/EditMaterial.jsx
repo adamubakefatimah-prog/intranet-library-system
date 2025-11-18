@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
+import { uploadToCloudinary } from "../services/cloudinaryService";
 
 export default function EditMaterial() {
   const { id } = useParams();
@@ -13,7 +14,9 @@ export default function EditMaterial() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+  const [file, setFile] = useState(null);
 
+  // Load material
   useEffect(() => {
     async function load() {
       try {
@@ -50,11 +53,26 @@ export default function EditMaterial() {
       </div>
     );
 
+  // Handle file selection
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
     setErr("");
+
     try {
+      let fileUrl = form.fileUrl || "";
+
+      // Upload new file if selected
+      if (file) {
+        fileUrl = await uploadToCloudinary(file);
+      }
+
       await updateMaterial(id, {
         title: form.title,
         author: form.author,
@@ -62,7 +80,9 @@ export default function EditMaterial() {
         type: form.type,
         abstract: form.abstract,
         keywords: form.keywords || [],
+        fileUrl, // include Cloudinary URL
       });
+
       toast.success("✅ Material updated successfully!");
       nav("/LibrarianDashboard");
     } catch (err) {
@@ -76,7 +96,7 @@ export default function EditMaterial() {
   return (
     <div className="max-w-2xl mx-auto bg-slate-800 p-8 mt-6 rounded-2xl shadow-lg text-slate-100">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">✏️ Edit Material</h2>
+        <h2 className="text-2xl font-bold"> Edit Material</h2>
         <button
           onClick={() => nav(-1)}
           className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-md text-sm"
@@ -97,7 +117,7 @@ export default function EditMaterial() {
           <input
             value={form.title}
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-            className="w-full p-2 bg-slate-700 border border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
           />
         </div>
 
@@ -106,30 +126,36 @@ export default function EditMaterial() {
           <input
             value={form.author}
             onChange={(e) => setForm((f) => ({ ...f, author: e.target.value }))}
-            className="w-full p-2 bg-slate-700 border border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold mb-1">
-            Publication Year
-          </label>
-          <input
-            type="number"
-            value={form.publicationYear}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, publicationYear: e.target.value }))
-            }
-            className="w-full p-2 bg-slate-700 border border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
+        <select
+          value={form.publicationYear}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, publicationYear: e.target.value }))
+          }
+          className="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
+        >
+          {" "}
+          <option value="">Select Publish Year</option>{" "}
+          {Array.from({ length: 50 }, (_, i) => {
+            const y = new Date().getFullYear() - i;
+            return (
+              <option key={y} value={y}>
+                {" "}
+                {y}{" "}
+              </option>
+            );
+          })}{" "}
+        </select>
 
         <div>
           <label className="block text-sm font-semibold mb-1">Type</label>
           <select
             value={form.type}
             onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-            className="w-full p-2 bg-slate-700 border border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
           >
             <option>Book</option>
             <option>Thesis</option>
@@ -147,8 +173,31 @@ export default function EditMaterial() {
             onChange={(e) =>
               setForm((f) => ({ ...f, abstract: e.target.value }))
             }
-            className="w-full p-2 bg-slate-700 border border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-1">File</label>
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx,application/pdf"
+            onChange={handleFileChange}
+            className="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
+          />
+          {form.fileUrl && (
+            <p className="mt-1 text-sm text-indigo-200">
+              Current file:{" "}
+              <a
+                href={form.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                View
+              </a>
+            </p>
+          )}
         </div>
 
         <button

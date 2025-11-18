@@ -11,6 +11,7 @@ export default function Register() {
   const [pass, setPass] = useState("");
   const [fullName, setFullName] = useState("");
   const [userId, setUserId] = useState("");
+  const [department, setDepartment] = useState("");   // ⭐ NEW
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const nav = useNavigate();
@@ -31,7 +32,7 @@ export default function Register() {
   const submit = async (e) => {
     e.preventDefault();
 
-    if (!fullName || !userId || !email || !pass) {
+    if (!fullName || !userId || !department || !email || !pass) {
       toast.warning("Please fill in all fields.");
       return;
     }
@@ -44,6 +45,7 @@ export default function Register() {
         email,
         fullName,
         userId,
+        department,   // ⭐ ADDED HERE
         role: "user",
       });
 
@@ -65,6 +67,7 @@ export default function Register() {
         </h2>
 
         <form onSubmit={submit} className="space-y-4">
+
           {/* Full Name */}
           <div>
             <label className="block text-sm text-gray-300 mb-1">Full Name</label>
@@ -89,6 +92,19 @@ export default function Register() {
               type="text"
               required
               placeholder="staff id or admission number"
+              className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* ⭐ Department */}
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Department</label>
+            <input
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              type="text"
+              required
+              placeholder="e.g. Computer Science"
               className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
